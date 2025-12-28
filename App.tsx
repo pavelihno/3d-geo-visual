@@ -5,6 +5,7 @@ import SearchInput from './components/SearchInput';
 import { GeoPoint, DistanceUnit, SearchResult } from './types';
 import { calculateDistance, formatDistance } from './utils/geoUtils';
 import { getCurrentLocation } from './utils/location';
+import { designTokens, getThemeClasses, ThemeMode } from './utils/designTokens';
 import {
   ArrowDownUp,
   RotateCcw,
@@ -17,7 +18,9 @@ import {
   ChevronRight,
   Trash2,
   LocateFixed,
-  AlertTriangle
+  AlertTriangle,
+  Moon,
+  Sun
 } from 'lucide-react';
 
 const DEFAULT_POINTS: GeoPoint[] = [
@@ -32,7 +35,14 @@ const App: React.FC = () => {
   const [activeEditingIndex, setActiveEditingIndex] = useState<number | null>(null);
   const [isLocating, setIsLocating] = useState<boolean>(false);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [themeMode, setThemeMode] = useState<ThemeMode>('light');
   const globeRef = useRef<GlobeMethods>(null);
+
+  const theme = getThemeClasses(themeMode);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', themeMode);
+  }, [themeMode]);
 
   useEffect(() => {
     let dist = 0;
@@ -115,39 +125,46 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="relative h-screen w-screen bg-[#f8fafc] overflow-hidden flex flex-col lg:flex-row font-sans">
+    <div
+      className={`relative h-screen w-screen overflow-hidden flex flex-col lg:flex-row font-sans transition-colors duration-500 ${theme.palette.background}`}
+    >
       {/* Visualizer Area */}
-      <div className="relative flex-grow h-[50vh] lg:h-full order-2 lg:order-1 border-b lg:border-b-0 border-gray-200">
-        <WorldGlobe 
+      <div
+        className={`relative flex-grow h-[50vh] lg:h-full order-2 lg:order-1 border-b lg:border-b-0 ${theme.palette.borderStrong} ${designTokens.spacing.layoutX}`}
+      >
+        <WorldGlobe
           ref={globeRef}
-          points={points} 
+          points={points}
           unit={unit}
           onPointMove={handlePointMove}
           activePointIndex={activeEditingIndex}
         />
 
         {/* Zoom Controls Overlay */}
-        <div className="absolute right-6 top-1/2 -translate-y-1/2 z-10 flex flex-col gap-3">
-          <div className="flex flex-col bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden">
-            <button 
+        <div className="absolute right-4 sm:right-6 top-4 sm:top-1/2 sm:-translate-y-1/2 z-10 flex sm:flex-col gap-3">
+          <div className={`flex flex-col ${theme.softPanel} overflow-hidden shadow-lg`}>
+            <button
               onClick={() => globeRef.current?.zoomIn()}
-              className="p-4 hover:bg-blue-50 text-gray-700 hover:text-blue-600 transition-all border-b border-gray-100 active:scale-95 touch-manipulation"
+              className={`p-4 ${theme.palette.textPrimary} hover:text-blue-500 focus-visible:ring-2 focus-visible:ring-blue-400/60 transition-colors border-b ${theme.palette.borderStrong} touch-manipulation`}
               title="Zoom In"
+              aria-label="Zoom in"
             >
               <Plus size={22} strokeWidth={2.5} />
             </button>
-            <button 
+            <button
               onClick={() => globeRef.current?.zoomOut()}
-              className="p-4 hover:bg-blue-50 text-gray-700 hover:text-blue-600 transition-all active:scale-95 touch-manipulation"
+              className={`p-4 ${theme.palette.textPrimary} hover:text-blue-500 focus-visible:ring-2 focus-visible:ring-blue-400/60 transition-colors touch-manipulation`}
               title="Zoom Out"
+              aria-label="Zoom out"
             >
               <Minus size={22} strokeWidth={2.5} />
             </button>
           </div>
-          <button 
+          <button
             onClick={() => globeRef.current?.resetView()}
-            className="p-4 bg-white border border-gray-200 rounded-2xl text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all shadow-xl active:scale-95 touch-manipulation"
+            className={`p-4 ${theme.softPanel} ${theme.palette.textPrimary} hover:text-blue-500 transition-all shadow-lg active:scale-95 touch-manipulation focus-visible:ring-2 focus-visible:ring-blue-400/60`}
             title="Reset View"
+            aria-label="Reset view"
           >
             <Navigation size={22} strokeWidth={2.5} />
           </button>
@@ -156,7 +173,7 @@ const App: React.FC = () => {
         {/* Manual Interaction Indicator */}
         {activeEditingIndex !== null && (
           <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20">
-            <div className="bg-blue-600 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-bounce">
+            <div className="bg-blue-600 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-bounce" role="status" aria-live="polite">
               <MousePointer2 size={18} />
               <span className="text-sm font-bold uppercase tracking-wider">
                 Tap on Earth to set Point {String.fromCharCode(65 + activeEditingIndex)}
@@ -167,84 +184,102 @@ const App: React.FC = () => {
       </div>
 
       {/* Control Sidebar */}
-      <div className="w-full lg:w-[420px] h-[50vh] lg:h-full bg-white z-30 flex flex-col order-1 lg:order-2 shadow-[-4px_0_24px_rgba(0,0,0,0.04)] border-l border-gray-100">
-        <header className="p-8 pb-4 flex items-center justify-between">
+      <div
+        className={`w-full lg:w-[430px] h-[50vh] lg:h-full z-30 flex flex-col order-1 lg:order-2 shadow-[-4px_0_24px_rgba(0,0,0,0.04)] border-l ${theme.palette.borderStrong} ${theme.panel}`}
+      >
+        <header className={`${designTokens.spacing.layoutX} ${designTokens.spacing.layoutY} pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between ${designTokens.spacing.gap}`}>
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-blue-600 rounded-2xl shadow-lg shadow-blue-200">
-              <Map className="text-white" size={24} />
+            <div className={`p-3 ${theme.palette.accentSurface} rounded-2xl shadow-lg shadow-blue-200/60 transition-transform duration-300 hover:scale-105`}>
+              <Map className="text-white" size={24} aria-hidden />
             </div>
             <div>
-              <h1 className="text-xl font-black text-gray-900 tracking-tight leading-none">GeoVisual</h1>
-              <p className="text-[10px] text-blue-500 font-black uppercase tracking-[0.2em] mt-1.5">Multi-Stop Journey</p>
+              <h1 className={`${designTokens.typography.title} ${theme.textPrimary}`}>GeoVisual</h1>
+              <p className={`${designTokens.typography.smallCaps} text-blue-400 mt-1.5`}>Multi-Stop Journey</p>
             </div>
           </div>
-          
-          <div className="flex bg-gray-100 rounded-xl p-1">
-            {(['km', 'mi'] as const).map((u) => (
-              <button
-                key={u}
-                onClick={() => setUnit(u === 'km' ? DistanceUnit.KILOMETERS : DistanceUnit.MILES)}
-                className={`px-3 py-1.5 rounded-lg text-[10px] font-black transition-all ${unit === (u === 'km' ? DistanceUnit.KILOMETERS : DistanceUnit.MILES) ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
-              >
-                {u.toUpperCase()}
-              </button>
-            ))}
+
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className={`flex ${theme.mutedSurface} ${designTokens.radii.pill} p-1`}>
+              {(['km', 'mi'] as const).map((u) => (
+                <button
+                  key={u}
+                  onClick={() => setUnit(u === 'km' ? DistanceUnit.KILOMETERS : DistanceUnit.MILES)}
+                  className={`px-3 py-1.5 ${designTokens.radii.pill} text-[11px] font-black transition-all focus-visible:outline-none focus-visible:ring-2 ${theme.palette.ring} ${unit === (u === 'km' ? DistanceUnit.KILOMETERS : DistanceUnit.MILES) ? `${theme.panel} ${theme.palette.textPrimary} shadow-sm` : `${theme.palette.textSecondary} hover:${theme.palette.textPrimary}`}`}
+                  aria-pressed={unit === (u === 'km' ? DistanceUnit.KILOMETERS : DistanceUnit.MILES)}
+                  aria-label={`Display distances in ${u === 'km' ? 'kilometers' : 'miles'}`}
+                >
+                  {u.toUpperCase()}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setThemeMode(themeMode === 'light' ? 'dark' : 'light')}
+              className={`p-2.5 ${theme.softPanel} ${theme.focusRing} flex items-center justify-center ${designTokens.radii.lg} transition-transform duration-200 hover:scale-105`}
+              aria-pressed={themeMode === 'dark'}
+              aria-label={`Activate ${themeMode === 'light' ? 'dark' : 'light'} mode`}
+              title="Toggle dark mode"
+            >
+              {themeMode === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+            </button>
           </div>
         </header>
 
-        <div className="px-8 -mt-2 space-y-3">
+        <div className={`${designTokens.spacing.layoutX} -mt-2 space-y-3`}>
           <button
             onClick={setCurrentLocation}
             disabled={isLocating}
-            className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-300 text-white py-3 rounded-2xl transition-all font-bold text-xs uppercase tracking-widest shadow-lg shadow-blue-200 active:scale-95"
+            className={`w-full flex items-center justify-center gap-2 ${theme.palette.accentSurface} ${theme.palette.accentHover} disabled:opacity-60 text-white ${designTokens.spacing.controlPadding} ${designTokens.radii.xl} transition-all font-bold text-xs uppercase tracking-widest active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70`}
           >
-            <LocateFixed size={16} />
+            <LocateFixed size={16} aria-hidden />
             {isLocating ? 'Detecting...' : 'Use Current Location'}
           </button>
           {locationError && (
-            <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-100 text-red-600 rounded-2xl text-[11px] font-semibold">
+            <div className={`flex items-center gap-2 p-3 ${designTokens.radii.lg} text-amber-100 bg-amber-500/20 border border-amber-200/70 ${theme.palette.textPrimary}`} role="alert" aria-live="polite">
               <AlertTriangle size={14} />
-              <span className="truncate">{locationError}</span>
+              <span className="truncate text-sm">{locationError}</span>
             </div>
           )}
         </div>
 
-        <div className="flex-grow p-8 space-y-6 overflow-y-auto custom-scrollbar">
+        <div className={`flex-grow ${designTokens.spacing.layoutX} ${designTokens.spacing.layoutY} space-y-6 overflow-y-auto custom-scrollbar`}>
           {/* Point List */}
           <div className="space-y-4">
             {points.map((p, idx) => (
               <div key={idx} className="relative group">
-                <div className="flex items-start gap-2">
+                <div className="flex items-start gap-3 sm:gap-4">
                   <div className="flex flex-col items-center mt-6">
-                    <div className="w-6 h-6 rounded-full bg-blue-50 border-2 border-blue-600 flex items-center justify-center text-[10px] font-black text-blue-600 shadow-sm">
+                    <div className="w-7 h-7 rounded-full bg-blue-500/10 border-2 border-blue-500 flex items-center justify-center text-[10px] font-black text-blue-600 shadow-sm">
                       {String.fromCharCode(65 + idx)}
                     </div>
                     {idx < points.length - 1 && (
-                      <div className="w-0.5 h-12 bg-gradient-to-b from-blue-600 to-blue-200 my-1 rounded-full opacity-30"></div>
+                      <div className="w-0.5 h-12 bg-gradient-to-b from-blue-500/60 to-blue-200/50 my-1 rounded-full opacity-70"></div>
                     )}
                   </div>
-                  
+
                   <div className="flex-grow pt-3">
                     <div className="relative">
-                      <SearchInput 
-                        label={`Point ${String.fromCharCode(65 + idx)}`} 
-                        placeholder="Search location..." 
+                      <SearchInput
+                        label={`Point ${String.fromCharCode(65 + idx)}`}
+                        placeholder="Search location..."
                         onSelect={handleSelect(idx)}
                         value={p?.name}
                         isActive={activeEditingIndex === idx}
                         onFocus={() => setActiveEditingIndex(idx)}
+                        themeMode={themeMode}
                       />
                       <div className="absolute right-0 -top-1 flex gap-1">
-                        <button 
+                        <button
                           onClick={() => setActiveEditingIndex(idx)}
-                          className={`p-2 transition-colors ${activeEditingIndex === idx ? 'text-blue-600' : 'text-gray-300 hover:text-gray-400'}`}
+                          className={`p-2 transition-colors ${designTokens.radii.lg} focus-visible:outline-none focus-visible:ring-2 ${theme.palette.ring} ${activeEditingIndex === idx ? 'text-blue-500' : `${theme.palette.textSecondary} hover:${theme.palette.textPrimary}`}`}
+                          aria-label={`Edit point ${String.fromCharCode(65 + idx)}`}
                         >
                           <Edit3 size={14} />
                         </button>
                         {points.length > 2 && (
-                          <button 
+                          <button
                             onClick={() => removePoint(idx)}
-                            className="p-2 text-gray-300 hover:text-red-500 transition-colors"
+                            className={`p-2 ${designTokens.radii.lg} ${theme.focusRing} ${theme.palette.textSecondary} hover:text-red-500 transition-colors`}
+                            aria-label={`Remove point ${String.fromCharCode(65 + idx)}`}
                           >
                             <Trash2 size={14} />
                           </button>
@@ -257,9 +292,10 @@ const App: React.FC = () => {
             ))}
 
             {/* Add Point Action */}
-            <button 
+            <button
               onClick={addPoint}
-              className="w-full py-4 border-2 border-dashed border-gray-100 rounded-3xl text-gray-400 hover:border-blue-200 hover:bg-blue-50/50 hover:text-blue-500 transition-all flex items-center justify-center gap-2 group"
+              className={`w-full py-4 border-2 border-dashed ${theme.palette.borderStrong} ${theme.focusRing} ${designTokens.radii.xl} ${theme.palette.textSecondary} hover:border-blue-300 hover:text-blue-500 hover:bg-blue-500/5 transition-all flex items-center justify-center gap-2 group`}
+              aria-label="Add a new stop"
             >
               <div className="w-6 h-6 rounded-full border-2 border-dashed border-current flex items-center justify-center transition-transform group-hover:scale-110">
                 <Plus size={14} />
@@ -270,9 +306,10 @@ const App: React.FC = () => {
 
           {/* Journey Controls */}
           <div className="flex justify-center pt-2">
-            <button 
+            <button
               onClick={reverseJourney}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-50 hover:bg-blue-50 text-gray-400 hover:text-blue-600 rounded-full border border-gray-100 transition-all text-[10px] font-black uppercase tracking-widest"
+              className={`flex items-center gap-2 px-5 py-2.5 ${theme.softPanel} ${theme.palette.textSecondary} hover:text-blue-500 rounded-full border ${theme.palette.borderStrong} transition-all text-[10px] font-black uppercase tracking-widest ${theme.focusRing}`}
+              aria-label="Reverse journey order"
             >
               <ArrowDownUp size={14} />
               Reverse Journey
@@ -280,20 +317,21 @@ const App: React.FC = () => {
           </div>
 
           {/* Result Card */}
-          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 p-8 rounded-[2.5rem] relative overflow-hidden group mt-4">
-            <div className="absolute -right-4 -top-4 opacity-5 group-hover:opacity-10 transition-opacity">
-              <Navigation size={120} className="rotate-45" />
+          <div className={`relative overflow-hidden group mt-4 ${theme.panel} border ${theme.palette.borderStrong}`}>
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-transparent to-indigo-500/10 opacity-70 group-hover:opacity-90 transition-opacity" />
+            <div className="absolute -right-6 -top-6 opacity-5 group-hover:opacity-10 transition-opacity">
+              <Navigation size={140} className="rotate-45" />
             </div>
-            <div className="relative z-10">
-              <p className="text-blue-500/80 text-[10px] font-black uppercase tracking-[0.3em] mb-3">Total Journey Distance</p>
-              <h2 className="text-5xl font-black text-gray-900 tracking-tighter flex items-baseline gap-2">
+            <div className="relative z-10 p-8 space-y-4">
+              <p className="text-blue-400 text-[11px] font-black uppercase tracking-[0.3em]">Total Journey Distance</p>
+              <h2 className={`text-4xl sm:text-5xl font-black tracking-tighter flex items-baseline gap-2 ${theme.textPrimary}`}>
                 {formatDistance(totalDistance, unit).split(' ')[0]}
-                <span className="text-xl font-bold text-blue-600 uppercase">{unit}</span>
+                <span className="text-xl font-bold text-blue-500 uppercase">{unit}</span>
               </h2>
-              <div className="mt-6 flex flex-wrap items-center gap-2 text-gray-500 text-[11px] font-medium">
+              <div className={`flex flex-wrap items-center gap-2 ${theme.textSecondary} text-[11px] font-medium`} aria-live="polite">
                 {points.map((p, i) => (
                   <React.Fragment key={i}>
-                    <span className="truncate max-w-[80px]">{p.name}</span>
+                    <span className="truncate max-w-[120px] sm:max-w-[160px]">{p.name}</span>
                     {i < points.length - 1 && <ChevronRight size={12} className="text-blue-300 shrink-0" />}
                   </React.Fragment>
                 ))}
@@ -302,10 +340,11 @@ const App: React.FC = () => {
           </div>
         </div>
 
-        <footer className="p-8 pt-4 border-t border-gray-50 bg-gray-50/50">
-          <button 
+        <footer className={`${designTokens.spacing.layoutX} ${designTokens.spacing.layoutY} pt-4 border-t ${theme.palette.borderStrong} ${theme.palette.surfaceSubtle}`}>
+          <button
             onClick={resetAll}
-            className="w-full flex items-center justify-center gap-2 bg-white hover:bg-red-50 text-gray-500 hover:text-red-500 py-4 rounded-2xl transition-all font-bold text-xs uppercase tracking-widest border border-gray-200 active:scale-95"
+            className={`w-full flex items-center justify-center gap-2 ${theme.softPanel} ${theme.palette.textSecondary} hover:text-red-500 py-4 ${designTokens.radii.lg} transition-all font-bold text-xs uppercase tracking-widest border ${theme.palette.borderStrong} active:scale-95 ${theme.focusRing}`}
+            aria-label="Reset journey to default points"
           >
             <RotateCcw size={16} />
             Reset Journey

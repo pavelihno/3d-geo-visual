@@ -2,30 +2,39 @@
 <img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
 </div>
 
-# Run and deploy your AI Studio app
+# Run and deploy the app
 
-This contains everything you need to run your app locally.
-
-View your app in AI Studio: https://ai.studio/apps/drive/1LnP4fToa9yt7Vy8mjc57sgFVazoOwBLS
+This contains everything you need to run the app locally.
 
 ## Run Locally
 
 **Prerequisites:**  Node.js
 
-
 1. Install dependencies:
    `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
+2. Run the app:
    `npm run dev`
+
+Searches use the OpenStreetMap Nominatim geocoding service (no API key required), so no environment variables are necessary.
+
+### UI notes
+
+- Responsive sidebar and search inputs designed for touch targets on mobile.
+- Light/dark toggle with glassmorphism-inspired panels driven by shared design tokens.
+- Accessible focus states, ARIA-labelled controls, and clearer status/error messaging across the search flow.
 
 ## Run with Docker
 
-Build and start the production preview server in a container:
+Build and start the production static server in a container (defaults to port 3000):
 
 ```bash
 docker build -t geo-visual .
-docker run --rm -p 4173:4173 -e GEMINI_API_KEY=<your_key> geo-visual
+docker run --rm -e APP_PORT=3000 -p 3000:3000 geo-visual
 ```
 
-The app will be available at http://localhost:4173.
+The app will be available at http://localhost:3000. To use a different port, set `APP_PORT` at build and/or runtime:
+
+```bash
+docker build --build-arg APP_PORT=4000 -t geo-visual .
+docker run --rm -e APP_PORT=4000 -p 4000:4000 geo-visual
+```
