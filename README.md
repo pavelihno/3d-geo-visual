@@ -18,3 +18,14 @@ View your app in AI Studio: https://ai.studio/apps/drive/1LnP4fToa9yt7Vy8mjc57sg
 2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
 3. Run the app:
    `npm run dev`
+
+## Run with Docker
+
+Build and start the production preview server in a container:
+
+```bash
+docker build -t geo-visual .
+docker run --rm -p 4173:4173 -e GEMINI_API_KEY=<your_key> geo-visual
+```
+
+The app will be available at http://localhost:4173.

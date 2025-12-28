@@ -1,5 +1,12 @@
 
-import React, { useEffect, useRef, useMemo, useImperativeHandle, forwardRef } from 'react';
+import React, {
+  useEffect,
+  useRef,
+  useMemo,
+  useImperativeHandle,
+  forwardRef
+} from 'react';
+import { createRoot } from 'react-dom/client';
 import Globe from 'react-globe.gl';
 import { GeoPoint, DistanceUnit } from '../types';
 import { getMidpoint, formatDistance, calculateDistance } from '../utils/geoUtils';
@@ -16,6 +23,42 @@ export interface GlobeMethods {
   zoomOut: () => void;
   resetView: () => void;
 }
+
+interface MarkerLabelProps {
+  label: string;
+  name: string;
+  isActive: boolean;
+}
+
+const MarkerLabel: React.FC<MarkerLabelProps> = ({ label, name, isActive }) => (
+  <div className="flex flex-col items-center group pointer-events-none">
+    <div className="bg-white/90 backdrop-blur-sm border border-black/5 px-2 py-0.5 rounded shadow-sm text-[9px] font-bold text-gray-800 mb-1 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+      {name}
+    </div>
+    <div
+      className={`w-6 h-6 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-[10px] font-black text-white transition-all ${
+        isActive ? 'bg-blue-600 ring-4 ring-blue-400/50 scale-125' : 'bg-blue-500'
+      }`}
+    >
+      {label}
+    </div>
+  </div>
+);
+
+interface SegmentLabelProps {
+  startLabel: string;
+  endLabel: string;
+  text: string;
+}
+
+const SegmentLabel: React.FC<SegmentLabelProps> = ({ startLabel, endLabel, text }) => (
+  <div className="px-2 py-1 bg-white/90 backdrop-blur-md rounded-lg border border-blue-100 shadow-lg flex flex-col items-center pointer-events-none">
+    <span className="text-[7px] font-black uppercase tracking-wider text-blue-400 leading-none mb-0.5">
+      {startLabel} → {endLabel}
+    </span>
+    <span className="text-[10px] font-black text-gray-900 leading-none">{text}</span>
+  </div>
+);
 
 const WorldGlobe = forwardRef<GlobeMethods, WorldGlobeProps>(({ points, unit, onPointMove, activePointIndex }, ref) => {
   // Fix: Added initial value null to useRef to satisfy TypeScript requirement of 1 argument
@@ -108,32 +151,22 @@ const WorldGlobe = forwardRef<GlobeMethods, WorldGlobeProps>(({ points, unit, on
         
         htmlElementsData={htmlData}
         htmlElement={(d: any) => {
-          const el = document.createElement('div');
+          const element = document.createElement('div');
+          const root = createRoot(element);
+
           if (d.type === 'marker') {
             const label = String.fromCharCode(65 + d.idx);
             const isActive = d.idx === activePointIndex;
-            el.innerHTML = `
-              <div class="flex flex-col items-center group pointer-events-none">
-                <div class="bg-white/90 backdrop-blur-sm border border-black/5 px-2 py-0.5 rounded shadow-sm text-[9px] font-bold text-gray-800 mb-1 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                  ${d.name}
-                </div>
-                <div class="w-6 h-6 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-[10px] font-black text-white ${isActive ? 'bg-blue-600 ring-4 ring-blue-400/50 scale-125' : 'bg-blue-500'} transition-all">
-                  ${label}
-                </div>
-              </div>
-            `;
+            root.render(<MarkerLabel label={label} name={d.name} isActive={isActive} />);
           } else {
-            // Segment Distance Label
             const startLabel = String.fromCharCode(65 + d.segmentIndex);
             const endLabel = String.fromCharCode(66 + d.segmentIndex);
-            el.innerHTML = `
-              <div class="px-2 py-1 bg-white/90 backdrop-blur-md rounded-lg border border-blue-100 shadow-lg flex flex-col items-center pointer-events-none">
-                <span class="text-[7px] font-black uppercase tracking-wider text-blue-400 leading-none mb-0.5">${startLabel} → ${endLabel}</span>
-                <span class="text-[10px] font-black text-gray-900 leading-none">${d.text}</span>
-              </div>
-            `;
+            root.render(
+              <SegmentLabel startLabel={startLabel} endLabel={endLabel} text={d.text} />
+            );
           }
-          return el;
+
+          return element;
         }}
         
         arcsData={arcData}

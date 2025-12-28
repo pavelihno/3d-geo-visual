@@ -4,18 +4,20 @@ import WorldGlobe, { GlobeMethods } from './components/WorldGlobe';
 import SearchInput from './components/SearchInput';
 import { GeoPoint, DistanceUnit, SearchResult } from './types';
 import { calculateDistance, formatDistance } from './utils/geoUtils';
-import { 
-  ArrowDownUp, 
-  RotateCcw, 
-  Plus, 
-  Minus, 
-  Map, 
-  Navigation, 
+import { getCurrentLocation } from './utils/location';
+import {
+  ArrowDownUp,
+  RotateCcw,
+  Plus,
+  Minus,
+  Map,
+  Navigation,
   MousePointer2,
   Edit3,
-  Search,
   ChevronRight,
-  Trash2
+  Trash2,
+  LocateFixed,
+  AlertTriangle
 } from 'lucide-react';
 
 const DEFAULT_POINTS: GeoPoint[] = [
@@ -28,6 +30,8 @@ const App: React.FC = () => {
   const [unit, setUnit] = useState<DistanceUnit>(DistanceUnit.KILOMETERS);
   const [totalDistance, setTotalDistance] = useState<number>(0);
   const [activeEditingIndex, setActiveEditingIndex] = useState<number | null>(null);
+  const [isLocating, setIsLocating] = useState<boolean>(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
   const globeRef = useRef<GlobeMethods>(null);
 
   useEffect(() => {
@@ -79,6 +83,28 @@ const App: React.FC = () => {
     const newPoints = [...points];
     newPoints[activeEditingIndex] = newPoint;
     setPoints(newPoints);
+  };
+
+  const setCurrentLocation = async () => {
+    try {
+      setIsLocating(true);
+      setLocationError(null);
+      const { lat, lng } = await getCurrentLocation();
+      const updatedPoints = [...points];
+      updatedPoints[0] = {
+        name: 'Current Location',
+        lat,
+        lng
+      };
+      setPoints(updatedPoints);
+      setActiveEditingIndex(0);
+      globeRef.current?.resetView();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to fetch your location.';
+      setLocationError(message);
+    } finally {
+      setIsLocating(false);
+    }
   };
 
   const resetAll = (e: React.MouseEvent) => {
@@ -165,6 +191,23 @@ const App: React.FC = () => {
             ))}
           </div>
         </header>
+
+        <div className="px-8 -mt-2 space-y-3">
+          <button
+            onClick={setCurrentLocation}
+            disabled={isLocating}
+            className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-300 text-white py-3 rounded-2xl transition-all font-bold text-xs uppercase tracking-widest shadow-lg shadow-blue-200 active:scale-95"
+          >
+            <LocateFixed size={16} />
+            {isLocating ? 'Detecting...' : 'Use Current Location'}
+          </button>
+          {locationError && (
+            <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-100 text-red-600 rounded-2xl text-[11px] font-semibold">
+              <AlertTriangle size={14} />
+              <span className="truncate">{locationError}</span>
+            </div>
+          )}
+        </div>
 
         <div className="flex-grow p-8 space-y-6 overflow-y-auto custom-scrollbar">
           {/* Point List */}

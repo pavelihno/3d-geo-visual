@@ -2,10 +2,15 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { SearchResult } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
+const ai = new GoogleGenAI({ apiKey });
 
 export const searchLocations = async (query: string): Promise<SearchResult[]> => {
   if (!query || query.length < 2) return [];
+  if (!apiKey) {
+    console.error('Missing GEMINI_API_KEY or API_KEY for location search.');
+    return [];
+  }
 
   try {
     const response = await ai.models.generateContent({
