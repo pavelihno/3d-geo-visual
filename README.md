@@ -8,7 +8,7 @@ This contains everything you need to run the app locally.
 
 ## Run Locally
 
-**Prerequisites:**  Node.js
+**Prerequisites:** Node.js
 
 1. Install dependencies:
    `npm install`
@@ -19,9 +19,9 @@ Searches use the OpenStreetMap Nominatim geocoding service (no API key required)
 
 ### UI notes
 
-- Responsive sidebar and search inputs designed for touch targets on mobile.
-- Light/dark toggle with glassmorphism-inspired panels driven by shared design tokens.
-- Accessible focus states, ARIA-labelled controls, and clearer status/error messaging across the search flow.
+-   Responsive sidebar and search inputs designed for touch targets on mobile.
+-   Light/dark toggle with glassmorphism-inspired panels driven by shared design tokens.
+-   Accessible focus states, ARIA-labelled controls, and clearer status/error messaging across the search flow.
 
 ## Run with Docker
 

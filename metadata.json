@@ -1,7 +1,7 @@
 {
-  "name": "GeoDistance 3D",
-  "description": "A world-class 3D globe visualization tool to measure distances between global locations with manual point adjustment and smart location search.",
-  "requestFramePermissions": [
-    "geolocation"
-  ]
+	"name": "GeoDistance 3D",
+	"description": "A world-class 3D globe visualization tool to measure distances between global locations with manual point adjustment and smart location search.",
+	"requestFramePermissions": [
+		"geolocation"
+	]
 }
