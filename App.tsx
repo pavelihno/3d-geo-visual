@@ -155,6 +155,7 @@ const App: React.FC = () => {
 					unit={unit}
 					onPointMove={handlePointMove}
 					activePointIndex={activeEditingIndex}
+					className={theme.palette.surfaceSubtle}
 				/>
 
 				{/* Zoom Controls Overlay */}
@@ -162,7 +163,7 @@ const App: React.FC = () => {
 					<div className={`flex flex-col ${theme.softPanel} overflow-hidden shadow-lg`}>
 						<button
 							onClick={() => globeRef.current?.zoomIn()}
-							className={`p-4 ${theme.palette.textPrimary} hover:text-blue-500 focus-visible:ring-2 focus-visible:ring-blue-400/60 transition-colors border-b ${theme.palette.borderStrong} touch-manipulation`}
+							className={`p-4 ${theme.palette.textPrimary} hover:${theme.palette.accent} focus-visible:outline-none focus-visible:ring-2 ${theme.palette.ring} transition-colors border-b ${theme.palette.borderStrong} touch-manipulation`}
 							title='Zoom In'
 							aria-label='Zoom in'
 						>
@@ -170,7 +171,7 @@ const App: React.FC = () => {
 						</button>
 						<button
 							onClick={() => globeRef.current?.zoomOut()}
-							className={`p-4 ${theme.palette.textPrimary} hover:text-blue-500 focus-visible:ring-2 focus-visible:ring-blue-400/60 transition-colors touch-manipulation`}
+							className={`p-4 ${theme.palette.textPrimary} hover:${theme.palette.accent} focus-visible:outline-none focus-visible:ring-2 ${theme.palette.ring} transition-colors touch-manipulation`}
 							title='Zoom Out'
 							aria-label='Zoom out'
 						>
@@ -179,7 +180,7 @@ const App: React.FC = () => {
 					</div>
 					<button
 						onClick={() => globeRef.current?.resetView()}
-						className={`p-4 ${theme.softPanel} ${theme.palette.textPrimary} hover:text-blue-500 transition-all shadow-lg active:scale-95 touch-manipulation focus-visible:ring-2 focus-visible:ring-blue-400/60`}
+						className={`p-4 ${theme.softPanel} ${theme.palette.textPrimary} hover:${theme.palette.accent} transition-all shadow-lg active:scale-95 touch-manipulation focus-visible:outline-none focus-visible:ring-2 ${theme.palette.ring}`}
 						title='Reset View'
 						aria-label='Reset view'
 					>

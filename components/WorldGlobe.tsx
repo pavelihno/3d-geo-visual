@@ -9,6 +9,7 @@ interface WorldGlobeProps {
 	unit: DistanceUnit;
 	onPointMove: (lat: number, lng: number) => void;
 	activePointIndex: number | null;
+	className?: string;
 }
 
 export interface GlobeMethods {
@@ -55,182 +56,184 @@ const SegmentLabel: React.FC<SegmentLabelProps> = ({ startLabel, endLabel, text 
 
 const isValidCoordinate = (lat: number, lng: number) => Number.isFinite(lat) && Number.isFinite(lng);
 
-const WorldGlobe = forwardRef<GlobeMethods, WorldGlobeProps>(({ points, unit, onPointMove, activePointIndex }, ref) => {
-	// Fix: Added initial value null to useRef to satisfy TypeScript requirement of 1 argument
-	const globeRef = useRef<any>(null);
-	const containerRef = useRef<HTMLDivElement>(null);
-	const [size, setSize] = useState({ width: 0, height: 0 });
+const WorldGlobe = forwardRef<GlobeMethods, WorldGlobeProps>(
+	({ points, unit, onPointMove, activePointIndex, className }, ref) => {
+		// Fix: Added initial value null to useRef to satisfy TypeScript requirement of 1 argument
+		const globeRef = useRef<any>(null);
+		const containerRef = useRef<HTMLDivElement>(null);
+		const [size, setSize] = useState({ width: 0, height: 0 });
 
-	useEffect(() => {
-		const element = containerRef.current;
-		if (!element) return;
-		let frameId = 0;
+		useEffect(() => {
+			const element = containerRef.current;
+			if (!element) return;
+			let frameId = 0;
 
-		const updateSize = () => {
-			const rect = element.getBoundingClientRect();
-			const nextWidth = Math.max(1, Math.floor(rect.width));
-			const nextHeight = Math.max(1, Math.floor(rect.height));
-			setSize((prev) => {
-				if (prev.width === nextWidth && prev.height === nextHeight) return prev;
-				return { width: nextWidth, height: nextHeight };
-			});
-		};
+			const updateSize = () => {
+				const rect = element.getBoundingClientRect();
+				const nextWidth = Math.max(1, Math.floor(rect.width));
+				const nextHeight = Math.max(1, Math.floor(rect.height));
+				setSize((prev) => {
+					if (prev.width === nextWidth && prev.height === nextHeight) return prev;
+					return { width: nextWidth, height: nextHeight };
+				});
+			};
 
-		updateSize();
+			updateSize();
 
-		if (typeof ResizeObserver !== 'undefined') {
-			const observer = new ResizeObserver(() => {
-				cancelAnimationFrame(frameId);
-				frameId = requestAnimationFrame(updateSize);
-			});
-			observer.observe(element);
+			if (typeof ResizeObserver !== 'undefined') {
+				const observer = new ResizeObserver(() => {
+					cancelAnimationFrame(frameId);
+					frameId = requestAnimationFrame(updateSize);
+				});
+				observer.observe(element);
+				return () => {
+					observer.disconnect();
+					cancelAnimationFrame(frameId);
+				};
+			}
+
+			window.addEventListener('resize', updateSize);
 			return () => {
-				observer.disconnect();
+				window.removeEventListener('resize', updateSize);
 				cancelAnimationFrame(frameId);
 			};
-		}
+		}, []);
 
-		window.addEventListener('resize', updateSize);
-		return () => {
-			window.removeEventListener('resize', updateSize);
-			cancelAnimationFrame(frameId);
-		};
-	}, []);
-
-	useImperativeHandle(
-		ref,
-		() => ({
-			zoomIn: () => {
-				// Fix: Explicitly passing undefined to pointOfView to handle environments where the getter overload expects at least one argument
-				const current = globeRef.current.pointOfView(undefined);
-				if (current) {
-					globeRef.current.pointOfView({ altitude: current.altitude * 0.7 }, 400);
-				}
-			},
-			zoomOut: () => {
-				// Fix: Explicitly passing undefined to pointOfView to handle environments where the getter overload expects at least one argument
-				const current = globeRef.current.pointOfView(undefined);
-				if (current) {
-					globeRef.current.pointOfView({ altitude: Math.min(current.altitude * 1.5, 4) }, 400);
-				}
-			},
-			resetView: () => {
-				globeRef.current.pointOfView({ lat: 20, lng: 0, altitude: 2.5 }, 800);
-			},
-		}),
-		[]
-	);
-
-	// Create sequential arcs: Point[0] -> Point[1], Point[1] -> Point[2]...
-	const arcData = useMemo(() => {
-		const arcs = [];
-		for (let i = 0; i < points.length - 1; i++) {
-			const start = points[i];
-			const end = points[i + 1];
-			if (!isValidCoordinate(start.lat, start.lng) || !isValidCoordinate(end.lat, end.lng)) {
-				continue;
-			}
-			arcs.push({
-				startLat: start.lat,
-				startLng: start.lng,
-				endLat: end.lat,
-				endLng: end.lng,
-				// Color shifts slightly along the path
-				color: ['rgba(59, 130, 246, 0.8)', 'rgba(37, 99, 235, 0.9)'],
-			});
-		}
-		return arcs;
-	}, [points]);
-
-	// Combine markers and distance labels as HTML elements
-	const htmlData = useMemo(() => {
-		const elements = [];
-
-		// 1. Add Point Markers
-		points.forEach((p, idx) => {
-			if (!isValidCoordinate(p.lat, p.lng)) return;
-			elements.push({ ...p, idx, type: 'marker' });
-		});
-
-		// 2. Add Segment Distance Labels
-		for (let i = 0; i < points.length - 1; i++) {
-			const p1 = points[i];
-			const p2 = points[i + 1];
-			if (!isValidCoordinate(p1.lat, p1.lng) || !isValidCoordinate(p2.lat, p2.lng)) {
-				continue;
-			}
-			const mid = getMidpoint(p1.lat, p1.lng, p2.lat, p2.lng);
-			const dist = calculateDistance(p1.lat, p1.lng, p2.lat, p2.lng, unit);
-
-			elements.push({
-				lat: mid.lat,
-				lng: mid.lng,
-				type: 'segment-label',
-				text: formatDistance(dist, unit),
-				segmentIndex: i,
-			});
-		}
-
-		return elements;
-	}, [points, unit]);
-
-	useEffect(() => {
-		if (globeRef.current) {
-			const controls = globeRef.current.controls();
-			if (controls) {
-				controls.autoRotate = points.length === 0;
-				controls.autoRotateSpeed = 0.8;
-			}
-			if (points.length === 0) {
-				globeRef.current.pointOfView({ lat: 20, lng: 0, altitude: 2.5 });
-			}
-		}
-	}, [points.length, size.width, size.height]);
-
-	return (
-		<div ref={containerRef} className='w-full h-full bg-[#f0f4f8]'>
-			<Globe
-				ref={globeRef}
-				width={size.width || 1}
-				height={size.height || 1}
-				globeImageUrl='//unpkg.com/three-globe/example/img/earth-blue-marble.jpg'
-				bumpImageUrl='//unpkg.com/three-globe/example/img/earth-topology.png'
-				backgroundImageUrl='//unpkg.com/three-globe/example/img/night-sky.png'
-				htmlElementsData={htmlData}
-				htmlElement={(d: any) => {
-					const element = document.createElement('div');
-					const root = createRoot(element);
-
-					if (d.type === 'marker') {
-						const label = String.fromCharCode(65 + d.idx);
-						const isActive = d.idx === activePointIndex;
-						root.render(<MarkerLabel label={label} name={d.name} isActive={isActive} />);
-					} else {
-						const startLabel = String.fromCharCode(65 + d.segmentIndex);
-						const endLabel = String.fromCharCode(66 + d.segmentIndex);
-						root.render(<SegmentLabel startLabel={startLabel} endLabel={endLabel} text={d.text} />);
+		useImperativeHandle(
+			ref,
+			() => ({
+				zoomIn: () => {
+					// Fix: Explicitly passing undefined to pointOfView to handle environments where the getter overload expects at least one argument
+					const current = globeRef.current.pointOfView(undefined);
+					if (current) {
+						globeRef.current.pointOfView({ altitude: current.altitude * 0.7 }, 400);
 					}
-
-					return element;
-				}}
-				arcsData={arcData}
-				arcColor='color'
-				arcDashLength={0.4}
-				arcDashGap={1}
-				arcDashAnimateTime={2000}
-				arcStroke={1.0}
-				arcCurveResolution={128}
-				onGlobeClick={({ lat, lng }) => {
-					if (activePointIndex !== null && Number.isFinite(lat) && Number.isFinite(lng)) {
-						onPointMove(lat, lng);
+				},
+				zoomOut: () => {
+					// Fix: Explicitly passing undefined to pointOfView to handle environments where the getter overload expects at least one argument
+					const current = globeRef.current.pointOfView(undefined);
+					if (current) {
+						globeRef.current.pointOfView({ altitude: Math.min(current.altitude * 1.5, 4) }, 400);
 					}
-				}}
-				showAtmosphere={true}
-				atmosphereColor='#cfe3ff'
-				atmosphereAltitude={0.15}
-			/>
-		</div>
-	);
-});
+				},
+				resetView: () => {
+					globeRef.current.pointOfView({ lat: 20, lng: 0, altitude: 2.5 }, 800);
+				},
+			}),
+			[]
+		);
+
+		// Create sequential arcs: Point[0] -> Point[1], Point[1] -> Point[2]...
+		const arcData = useMemo(() => {
+			const arcs = [];
+			for (let i = 0; i < points.length - 1; i++) {
+				const start = points[i];
+				const end = points[i + 1];
+				if (!isValidCoordinate(start.lat, start.lng) || !isValidCoordinate(end.lat, end.lng)) {
+					continue;
+				}
+				arcs.push({
+					startLat: start.lat,
+					startLng: start.lng,
+					endLat: end.lat,
+					endLng: end.lng,
+					// Color shifts slightly along the path
+					color: ['rgba(59, 130, 246, 0.8)', 'rgba(37, 99, 235, 0.9)'],
+				});
+			}
+			return arcs;
+		}, [points]);
+
+		// Combine markers and distance labels as HTML elements
+		const htmlData = useMemo(() => {
+			const elements = [];
+
+			// 1. Add Point Markers
+			points.forEach((p, idx) => {
+				if (!isValidCoordinate(p.lat, p.lng)) return;
+				elements.push({ ...p, idx, type: 'marker' });
+			});
+
+			// 2. Add Segment Distance Labels
+			for (let i = 0; i < points.length - 1; i++) {
+				const p1 = points[i];
+				const p2 = points[i + 1];
+				if (!isValidCoordinate(p1.lat, p1.lng) || !isValidCoordinate(p2.lat, p2.lng)) {
+					continue;
+				}
+				const mid = getMidpoint(p1.lat, p1.lng, p2.lat, p2.lng);
+				const dist = calculateDistance(p1.lat, p1.lng, p2.lat, p2.lng, unit);
+
+				elements.push({
+					lat: mid.lat,
+					lng: mid.lng,
+					type: 'segment-label',
+					text: formatDistance(dist, unit),
+					segmentIndex: i,
+				});
+			}
+
+			return elements;
+		}, [points, unit]);
+
+		useEffect(() => {
+			if (globeRef.current) {
+				const controls = globeRef.current.controls();
+				if (controls) {
+					controls.autoRotate = points.length === 0;
+					controls.autoRotateSpeed = 0.8;
+				}
+				if (points.length === 0) {
+					globeRef.current.pointOfView({ lat: 20, lng: 0, altitude: 2.5 });
+				}
+			}
+		}, [points.length, size.width, size.height]);
+
+		return (
+			<div ref={containerRef} className={`w-full h-full ${className ?? ''}`}>
+				<Globe
+					ref={globeRef}
+					width={size.width || 1}
+					height={size.height || 1}
+					globeImageUrl='//unpkg.com/three-globe/example/img/earth-blue-marble.jpg'
+					bumpImageUrl='//unpkg.com/three-globe/example/img/earth-topology.png'
+					backgroundImageUrl='//unpkg.com/three-globe/example/img/night-sky.png'
+					htmlElementsData={htmlData}
+					htmlElement={(d: any) => {
+						const element = document.createElement('div');
+						const root = createRoot(element);
+
+						if (d.type === 'marker') {
+							const label = String.fromCharCode(65 + d.idx);
+							const isActive = d.idx === activePointIndex;
+							root.render(<MarkerLabel label={label} name={d.name} isActive={isActive} />);
+						} else {
+							const startLabel = String.fromCharCode(65 + d.segmentIndex);
+							const endLabel = String.fromCharCode(66 + d.segmentIndex);
+							root.render(<SegmentLabel startLabel={startLabel} endLabel={endLabel} text={d.text} />);
+						}
+
+						return element;
+					}}
+					arcsData={arcData}
+					arcColor='color'
+					arcDashLength={0.4}
+					arcDashGap={1}
+					arcDashAnimateTime={2000}
+					arcStroke={1.0}
+					arcCurveResolution={128}
+					onGlobeClick={({ lat, lng }) => {
+						if (activePointIndex !== null && Number.isFinite(lat) && Number.isFinite(lng)) {
+							onPointMove(lat, lng);
+						}
+					}}
+					showAtmosphere={true}
+					atmosphereColor='#cfe3ff'
+					atmosphereAltitude={0.15}
+				/>
+			</div>
+		);
+	}
+);
 
 export default WorldGlobe;
