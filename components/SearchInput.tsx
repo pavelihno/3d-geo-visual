@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useId } from 'react';
 import { SearchResult } from '../types';
 import { searchLocations } from '../services/geocodingService';
 import { Search, MapPin, AlertTriangle } from 'lucide-react';
@@ -32,7 +32,8 @@ const SearchInput: React.FC<SearchInputProps> = ({
 	const [error, setError] = useState<string | null>(null);
 	const dropdownRef = useRef<HTMLDivElement>(null);
 	const theme = getThemeClasses(themeMode);
-	const inputId = `search-${label.replace(/\s+/g, '-').toLowerCase()}`;
+	const inputId = useId();
+	const errorId = `${inputId}-error`;
 
 	useEffect(() => {
 		setQuery(value || '');
@@ -49,6 +50,7 @@ const SearchInput: React.FC<SearchInputProps> = ({
 				setError(`Please enter at least ${MIN_QUERY_LENGTH} characters to search.`);
 				setResults([]);
 				setShowDropdown(false);
+				setIsSearching(false);
 				return;
 			}
 
@@ -81,6 +83,7 @@ const SearchInput: React.FC<SearchInputProps> = ({
 				setResults([]);
 				setShowDropdown(false);
 				setError(null);
+				setIsSearching(false);
 			}
 		}, 250);
 
@@ -138,7 +141,7 @@ const SearchInput: React.FC<SearchInputProps> = ({
 					aria-label={label}
 					aria-expanded={showDropdown}
 					aria-invalid={Boolean(error)}
-					aria-describedby={error ? `${inputId}-error` : undefined}
+					aria-describedby={error ? errorId : undefined}
 				/>
 				{isSearching && (
 					<div className='absolute right-4 top-1/2 -translate-y-1/2'>
@@ -150,7 +153,7 @@ const SearchInput: React.FC<SearchInputProps> = ({
 			{error && (
 				<div
 					className='mt-2 flex items-start gap-2 text-xs text-amber-500'
-					id={`${inputId}-error`}
+					id={errorId}
 					role='alert'
 					aria-live='polite'
 				>

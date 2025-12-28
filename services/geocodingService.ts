@@ -26,7 +26,13 @@ interface NominatimResult {
 	};
 }
 
-const normalizeResult = (entry: NominatimResult): SearchResult => {
+const normalizeResult = (entry: NominatimResult): SearchResult | null => {
+	const lat = Number.parseFloat(entry.lat);
+	const lng = Number.parseFloat(entry.lon);
+	if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+		return null;
+	}
+
 	const name =
 		entry.address?.city ||
 		entry.address?.town ||
@@ -43,8 +49,8 @@ const normalizeResult = (entry: NominatimResult): SearchResult => {
 
 	return {
 		name,
-		lat: Number.parseFloat(entry.lat),
-		lng: Number.parseFloat(entry.lon),
+		lat,
+		lng,
 		description: descriptionParts.join(' • ') || entry.display_name,
 		country,
 	};
@@ -78,5 +84,5 @@ export const searchLocations = async (query: string, options: GeocodingOptions =
 	}
 
 	const data: NominatimResult[] = await response.json();
-	return data.map(normalizeResult);
+	return data.map(normalizeResult).filter((item): item is SearchResult => item !== null);
 };

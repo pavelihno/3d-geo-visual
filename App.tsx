@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import WorldGlobe, { GlobeMethods } from './components/WorldGlobe';
 import SearchInput from './components/SearchInput';
 import { GeoPoint, DistanceUnit, SearchResult } from './types';
@@ -30,7 +30,6 @@ const DEFAULT_POINTS: GeoPoint[] = [
 const App: React.FC = () => {
 	const [points, setPoints] = useState<GeoPoint[]>(DEFAULT_POINTS);
 	const [unit, setUnit] = useState<DistanceUnit>(DistanceUnit.KILOMETERS);
-	const [totalDistance, setTotalDistance] = useState<number>(0);
 	const [activeEditingIndex, setActiveEditingIndex] = useState<number | null>(null);
 	const [isLocating, setIsLocating] = useState<boolean>(false);
 	const [locationError, setLocationError] = useState<string | null>(null);
@@ -38,54 +37,70 @@ const App: React.FC = () => {
 	const globeRef = useRef<GlobeMethods>(null);
 
 	const theme = getThemeClasses(themeMode);
+	const totalDistance = useMemo(() => {
+		let dist = 0;
+		for (let i = 0; i < points.length - 1; i++) {
+			dist += calculateDistance(points[i].lat, points[i].lng, points[i + 1].lat, points[i + 1].lng, unit);
+		}
+		return dist;
+	}, [points, unit]);
+	const totalDistanceLabel = useMemo(() => formatDistance(totalDistance, unit), [totalDistance, unit]);
+	const totalDistanceValue = totalDistanceLabel.split(' ')[0] ?? '0';
 
 	useEffect(() => {
 		document.documentElement.setAttribute('data-theme', themeMode);
 	}, [themeMode]);
 
-	useEffect(() => {
-		let dist = 0;
-		for (let i = 0; i < points.length - 1; i++) {
-			dist += calculateDistance(points[i].lat, points[i].lng, points[i + 1].lat, points[i + 1].lng, unit);
-		}
-		setTotalDistance(dist);
-	}, [points, unit]);
-
 	const handleSelect = (index: number) => (result: SearchResult) => {
-		const newPoint = { name: result.name, lat: result.lat, lng: result.lng, country: result.country };
-		const newPoints = [...points];
-		newPoints[index] = newPoint;
-		setPoints(newPoints);
+		setPoints((prev) => {
+			if (!prev[index]) return prev;
+			const newPoint = { name: result.name, lat: result.lat, lng: result.lng, country: result.country };
+			const newPoints = [...prev];
+			newPoints[index] = newPoint;
+			return newPoints;
+		});
 		setActiveEditingIndex(null);
 	};
 
 	const addPoint = () => {
-		const lastPoint = points[points.length - 1];
+		const lastPoint = points[points.length - 1] ?? DEFAULT_POINTS[DEFAULT_POINTS.length - 1];
 		// Create a generic "Next Stop" placeholder based on last point or default
 		const newPoint = { ...lastPoint, name: `Stop ${points.length + 1}` };
-		setPoints([...points, newPoint]);
+		setPoints((prev) => [...prev, newPoint]);
 		setActiveEditingIndex(points.length);
 	};
 
 	const removePoint = (index: number) => {
 		// Keep at least two points to satisfy "default two points"
 		if (points.length <= 2) return;
-		const newPoints = points.filter((_, i) => i !== index);
-		setPoints(newPoints);
-		if (activeEditingIndex === index) setActiveEditingIndex(null);
+		setPoints((prev) => prev.filter((_, i) => i !== index));
+		setActiveEditingIndex((current) => {
+			if (current === null) return null;
+			if (current === index) return null;
+			if (current > index) return current - 1;
+			return current;
+		});
 	};
 
 	const reverseJourney = () => {
 		setPoints([...points].reverse());
+		setActiveEditingIndex((current) => {
+			if (current === null) return null;
+			return points.length - 1 - current;
+		});
 	};
 
 	const handlePointMove = (lat: number, lng: number) => {
 		if (activeEditingIndex === null) return;
+		if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
 		const label = String.fromCharCode(65 + activeEditingIndex);
 		const newPoint = { name: `Custom Pin ${label}`, lat, lng };
-		const newPoints = [...points];
-		newPoints[activeEditingIndex] = newPoint;
-		setPoints(newPoints);
+		setPoints((prev) => {
+			if (!prev[activeEditingIndex]) return prev;
+			const newPoints = [...prev];
+			newPoints[activeEditingIndex] = newPoint;
+			return newPoints;
+		});
 	};
 
 	const setCurrentLocation = async () => {
@@ -93,13 +108,24 @@ const App: React.FC = () => {
 			setIsLocating(true);
 			setLocationError(null);
 			const { lat, lng } = await getCurrentLocation();
-			const updatedPoints = [...points];
-			updatedPoints[0] = {
-				name: 'Current Location',
-				lat,
-				lng,
-			};
-			setPoints(updatedPoints);
+			setPoints((prev) => {
+				if (prev.length === 0) {
+					return [
+						{
+							name: 'Current Location',
+							lat,
+							lng,
+						},
+					];
+				}
+				const updatedPoints = [...prev];
+				updatedPoints[0] = {
+					name: 'Current Location',
+					lat,
+					lng,
+				};
+				return updatedPoints;
+			});
 			setActiveEditingIndex(0);
 			globeRef.current?.resetView();
 		} catch (error) {
@@ -112,18 +138,16 @@ const App: React.FC = () => {
 
 	const resetAll = (e: React.MouseEvent) => {
 		e.preventDefault(); // Prevent potential default behavior issues
-		setPoints(DEFAULT_POINTS);
+		setPoints(DEFAULT_POINTS.map((point) => ({ ...point })));
 		setActiveEditingIndex(null);
 		globeRef.current?.resetView();
 	};
 
 	return (
-		<div
-			className={`relative h-screen w-screen overflow-hidden flex flex-col lg:flex-row font-sans transition-colors duration-500 ${theme.palette.background}`}
-		>
+		<div className={`relative app-shell font-sans transition-colors duration-500 ${theme.palette.background}`}>
 			{/* Visualizer Area */}
 			<div
-				className={`relative flex-grow h-[50vh] lg:h-full order-2 lg:order-1 border-b lg:border-b-0 ${theme.palette.borderStrong} ${designTokens.spacing.layoutX}`}
+				className={`relative app-globe overflow-hidden border-b lg:border-b-0 ${theme.palette.borderStrong} ${designTokens.spacing.layoutX}`}
 			>
 				<WorldGlobe
 					ref={globeRef}
@@ -182,7 +206,7 @@ const App: React.FC = () => {
 
 			{/* Control Sidebar */}
 			<div
-				className={`w-full lg:w-[430px] h-[50vh] lg:h-full z-30 flex flex-col order-1 lg:order-2 shadow-[-4px_0_24px_rgba(0,0,0,0.04)] border-l ${theme.palette.borderStrong} ${theme.panel}`}
+				className={`app-sidebar z-30 flex flex-col min-h-0 shadow-[-4px_0_24px_rgba(0,0,0,0.04)] border-l ${theme.palette.borderStrong} ${theme.panel}`}
 			>
 				<header
 					className={`${designTokens.spacing.layoutX} ${designTokens.spacing.layoutY} pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between ${designTokens.spacing.gap}`}
@@ -257,7 +281,7 @@ const App: React.FC = () => {
 				</div>
 
 				<div
-					className={`flex-grow ${designTokens.spacing.layoutX} ${designTokens.spacing.layoutY} space-y-6 overflow-y-auto custom-scrollbar`}
+					className={`flex-grow min-h-0 ${designTokens.spacing.layoutX} ${designTokens.spacing.layoutY} space-y-6 overflow-y-auto custom-scrollbar`}
 				>
 					{/* Point List */}
 					<div className='space-y-4'>
@@ -356,7 +380,7 @@ const App: React.FC = () => {
 							<h2
 								className={`text-4xl sm:text-5xl font-black tracking-tighter flex items-baseline gap-2 ${theme.textPrimary}`}
 							>
-								{formatDistance(totalDistance, unit).split(' ')[0]}
+								{totalDistanceValue}
 								<span className='text-xl font-bold text-blue-500 uppercase'>{unit}</span>
 							</h2>
 							<div

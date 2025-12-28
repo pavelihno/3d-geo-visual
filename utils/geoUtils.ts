@@ -7,6 +7,9 @@ export const calculateDistance = (
 	lon2: number,
 	unit: DistanceUnit
 ): number => {
+	if (![lat1, lon1, lat2, lon2].every((value) => Number.isFinite(value))) {
+		return 0;
+	}
 	const R = 6371; // Radius of Earth in KM
 	const dLat = (lat2 - lat1) * (Math.PI / 180);
 	const dLon = (lon2 - lon1) * (Math.PI / 180);

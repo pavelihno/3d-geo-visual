@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useMemo, useImperativeHandle, forwardRef } from 'react';
+import React, { useEffect, useRef, useMemo, useImperativeHandle, forwardRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import Globe from 'react-globe.gl';
 import { GeoPoint, DistanceUnit } from '../types';
@@ -53,9 +53,49 @@ const SegmentLabel: React.FC<SegmentLabelProps> = ({ startLabel, endLabel, text 
 	</div>
 );
 
+const isValidCoordinate = (lat: number, lng: number) => Number.isFinite(lat) && Number.isFinite(lng);
+
 const WorldGlobe = forwardRef<GlobeMethods, WorldGlobeProps>(({ points, unit, onPointMove, activePointIndex }, ref) => {
 	// Fix: Added initial value null to useRef to satisfy TypeScript requirement of 1 argument
 	const globeRef = useRef<any>(null);
+	const containerRef = useRef<HTMLDivElement>(null);
+	const [size, setSize] = useState({ width: 0, height: 0 });
+
+	useEffect(() => {
+		const element = containerRef.current;
+		if (!element) return;
+		let frameId = 0;
+
+		const updateSize = () => {
+			const rect = element.getBoundingClientRect();
+			const nextWidth = Math.max(1, Math.floor(rect.width));
+			const nextHeight = Math.max(1, Math.floor(rect.height));
+			setSize((prev) => {
+				if (prev.width === nextWidth && prev.height === nextHeight) return prev;
+				return { width: nextWidth, height: nextHeight };
+			});
+		};
+
+		updateSize();
+
+		if (typeof ResizeObserver !== 'undefined') {
+			const observer = new ResizeObserver(() => {
+				cancelAnimationFrame(frameId);
+				frameId = requestAnimationFrame(updateSize);
+			});
+			observer.observe(element);
+			return () => {
+				observer.disconnect();
+				cancelAnimationFrame(frameId);
+			};
+		}
+
+		window.addEventListener('resize', updateSize);
+		return () => {
+			window.removeEventListener('resize', updateSize);
+			cancelAnimationFrame(frameId);
+		};
+	}, []);
 
 	useImperativeHandle(
 		ref,
@@ -85,11 +125,16 @@ const WorldGlobe = forwardRef<GlobeMethods, WorldGlobeProps>(({ points, unit, on
 	const arcData = useMemo(() => {
 		const arcs = [];
 		for (let i = 0; i < points.length - 1; i++) {
+			const start = points[i];
+			const end = points[i + 1];
+			if (!isValidCoordinate(start.lat, start.lng) || !isValidCoordinate(end.lat, end.lng)) {
+				continue;
+			}
 			arcs.push({
-				startLat: points[i].lat,
-				startLng: points[i].lng,
-				endLat: points[i + 1].lat,
-				endLng: points[i + 1].lng,
+				startLat: start.lat,
+				startLng: start.lng,
+				endLat: end.lat,
+				endLng: end.lng,
 				// Color shifts slightly along the path
 				color: ['rgba(59, 130, 246, 0.8)', 'rgba(37, 99, 235, 0.9)'],
 			});
@@ -103,6 +148,7 @@ const WorldGlobe = forwardRef<GlobeMethods, WorldGlobeProps>(({ points, unit, on
 
 		// 1. Add Point Markers
 		points.forEach((p, idx) => {
+			if (!isValidCoordinate(p.lat, p.lng)) return;
 			elements.push({ ...p, idx, type: 'marker' });
 		});
 
@@ -110,6 +156,9 @@ const WorldGlobe = forwardRef<GlobeMethods, WorldGlobeProps>(({ points, unit, on
 		for (let i = 0; i < points.length - 1; i++) {
 			const p1 = points[i];
 			const p2 = points[i + 1];
+			if (!isValidCoordinate(p1.lat, p1.lng) || !isValidCoordinate(p2.lat, p2.lng)) {
+				continue;
+			}
 			const mid = getMidpoint(p1.lat, p1.lng, p2.lat, p2.lng);
 			const dist = calculateDistance(p1.lat, p1.lng, p2.lat, p2.lng, unit);
 
@@ -136,12 +185,14 @@ const WorldGlobe = forwardRef<GlobeMethods, WorldGlobeProps>(({ points, unit, on
 				globeRef.current.pointOfView({ lat: 20, lng: 0, altitude: 2.5 });
 			}
 		}
-	}, [points.length]);
+	}, [points.length, size.width, size.height]);
 
 	return (
-		<div className='w-full h-full bg-[#f0f4f8]'>
+		<div ref={containerRef} className='w-full h-full bg-[#f0f4f8]'>
 			<Globe
 				ref={globeRef}
+				width={size.width || 1}
+				height={size.height || 1}
 				globeImageUrl='//unpkg.com/three-globe/example/img/earth-blue-marble.jpg'
 				bumpImageUrl='//unpkg.com/three-globe/example/img/earth-topology.png'
 				backgroundImageUrl='//unpkg.com/three-globe/example/img/night-sky.png'
@@ -170,7 +221,9 @@ const WorldGlobe = forwardRef<GlobeMethods, WorldGlobeProps>(({ points, unit, on
 				arcStroke={1.0}
 				arcCurveResolution={128}
 				onGlobeClick={({ lat, lng }) => {
-					if (activePointIndex !== null) onPointMove(lat, lng);
+					if (activePointIndex !== null && Number.isFinite(lat) && Number.isFinite(lng)) {
+						onPointMove(lat, lng);
+					}
 				}}
 				showAtmosphere={true}
 				atmosphereColor='#cfe3ff'
