@@ -9,15 +9,15 @@ interface GeocodingOptions {
 }
 
 interface NominatimResult {
-        display_name: string;
-        lat: string;
-        lon: string;
-        type?: string;
-        place_id?: number;
-        boundingbox?: [string, string, string, string];
-        address?: {
-                city?: string;
-                town?: string;
+	display_name: string;
+	lat: string;
+	lon: string;
+	type?: string;
+	place_id?: number;
+	boundingbox?: [string, string, string, string];
+	address?: {
+		city?: string;
+		town?: string;
 		village?: string;
 		hamlet?: string;
 		suburb?: string;
@@ -31,9 +31,9 @@ interface NominatimResult {
 const normalizeResult = (entry: NominatimResult): SearchResult | null => {
 	const lat = Number.parseFloat(entry.lat);
 	const lng = Number.parseFloat(entry.lon);
-        if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-                return null;
-        }
+	if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+		return null;
+	}
 
 	const name =
 		entry.address?.city ||
@@ -49,26 +49,26 @@ const normalizeResult = (entry: NominatimResult): SearchResult | null => {
 	const placeType = entry.type ? entry.type.replace(/_/g, ' ') : '';
 	const descriptionParts = [placeType, region, country].map((part) => part.trim()).filter(Boolean);
 
-        const boundingBox = entry.boundingbox
-                ? {
-                          south: Number.parseFloat(entry.boundingbox[0]),
-                          north: Number.parseFloat(entry.boundingbox[1]),
-                          west: Number.parseFloat(entry.boundingbox[2]),
-                          east: Number.parseFloat(entry.boundingbox[3]),
-                  }
-                : undefined;
+	const boundingBox = entry.boundingbox
+		? {
+				south: Number.parseFloat(entry.boundingbox[0]),
+				north: Number.parseFloat(entry.boundingbox[1]),
+				west: Number.parseFloat(entry.boundingbox[2]),
+				east: Number.parseFloat(entry.boundingbox[3]),
+		  }
+		: undefined;
 
-        const id = entry.place_id ? String(entry.place_id) : `${lat.toFixed(4)}_${lng.toFixed(4)}_${name}`;
+	const id = entry.place_id ? String(entry.place_id) : `${lat.toFixed(4)}_${lng.toFixed(4)}_${name}`;
 
-        return {
-                name,
-                lat,
-                lng,
-                description: descriptionParts.join(' • ') || entry.display_name,
-                country,
-                boundingBox,
-                id,
-        };
+	return {
+		name,
+		lat,
+		lng,
+		description: descriptionParts.join(' • ') || entry.display_name,
+		country,
+		boundingBox,
+		id,
+	};
 };
 
 export const searchLocations = async (query: string, options: GeocodingOptions = {}): Promise<SearchResult[]> => {

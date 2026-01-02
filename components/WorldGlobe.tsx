@@ -5,13 +5,13 @@ import { ComparisonMode, GeoJsonLike, GeoPoint, DistanceUnit } from '../types';
 import { getMidpoint, formatDistance, calculateDistance } from '../utils/geoUtils';
 
 interface WorldGlobeProps {
-        points: GeoPoint[];
-        unit: DistanceUnit;
-        onPointMove: (lat: number, lng: number) => void;
-        activePointIndex: number | null;
-        className?: string;
-        comparisonMode: ComparisonMode;
-        regionPolygons?: GeoJsonLike[];
+	points: GeoPoint[];
+	unit: DistanceUnit;
+	onPointMove: (lat: number, lng: number) => void;
+	activePointIndex: number | null;
+	className?: string;
+	comparisonMode: ComparisonMode;
+	regionPolygons?: GeoJsonLike[];
 }
 
 export interface GlobeMethods {
@@ -59,7 +59,7 @@ const SegmentLabel: React.FC<SegmentLabelProps> = ({ startLabel, endLabel, text 
 const isValidCoordinate = (lat: number, lng: number) => Number.isFinite(lat) && Number.isFinite(lng);
 
 const WorldGlobe = forwardRef<GlobeMethods, WorldGlobeProps>(
-        ({ points, unit, onPointMove, activePointIndex, className, comparisonMode, regionPolygons }, ref) => {
+	({ points, unit, onPointMove, activePointIndex, className, comparisonMode, regionPolygons }, ref) => {
 		// Fix: Added initial value null to useRef to satisfy TypeScript requirement of 1 argument
 		const globeRef = useRef<any>(null);
 		const containerRef = useRef<HTMLDivElement>(null);
@@ -147,8 +147,8 @@ const WorldGlobe = forwardRef<GlobeMethods, WorldGlobeProps>(
 		}, [points]);
 
 		// Combine markers and distance labels as HTML elements
-                const htmlData = useMemo(() => {
-                        const elements = [];
+		const htmlData = useMemo(() => {
+			const elements = [];
 
 			// 1. Add Point Markers
 			points.forEach((p, idx) => {
@@ -175,34 +175,34 @@ const WorldGlobe = forwardRef<GlobeMethods, WorldGlobeProps>(
 				});
 			}
 
-                        return elements;
-                }, [points, unit]);
+			return elements;
+		}, [points, unit]);
 
-                const polygonData = useMemo(() => {
-                        if (comparisonMode !== ComparisonMode.AREA) return [] as any[];
-                        const features: any[] = [];
+		const polygonData = useMemo(() => {
+			if (comparisonMode !== ComparisonMode.AREA) return [] as any[];
+			const features: any[] = [];
 
-                        (regionPolygons || []).forEach((poly) => {
-                                if (!poly) return;
+			(regionPolygons || []).forEach((poly) => {
+				if (!poly) return;
 
-                                if ((poly as any).type === 'FeatureCollection' && Array.isArray((poly as any).features)) {
-                                        (poly as any).features.forEach((feat: any) => {
-                                                if (!feat) return;
-                                                features.push({
-                                                        ...feat,
-                                                        polygonGeoJsonGeometry: (feat as any).geometry ?? (feat as any).polygonGeoJsonGeometry,
-                                                });
-                                        });
-                                } else {
-                                        features.push({
-                                                ...poly,
-                                                polygonGeoJsonGeometry: (poly as any).geometry ?? (poly as any).polygonGeoJsonGeometry,
-                                        });
-                                }
-                        });
+				if ((poly as any).type === 'FeatureCollection' && Array.isArray((poly as any).features)) {
+					(poly as any).features.forEach((feat: any) => {
+						if (!feat) return;
+						features.push({
+							...feat,
+							polygonGeoJsonGeometry: (feat as any).geometry ?? (feat as any).polygonGeoJsonGeometry,
+						});
+					});
+				} else {
+					features.push({
+						...poly,
+						polygonGeoJsonGeometry: (poly as any).geometry ?? (poly as any).polygonGeoJsonGeometry,
+					});
+				}
+			});
 
-                        return features;
-                }, [comparisonMode, regionPolygons]);
+			return features;
+		}, [comparisonMode, regionPolygons]);
 
 		useEffect(() => {
 			if (globeRef.current) {
@@ -227,9 +227,9 @@ const WorldGlobe = forwardRef<GlobeMethods, WorldGlobeProps>(
 					bumpImageUrl='//unpkg.com/three-globe/example/img/earth-topology.png'
 					backgroundImageUrl='//unpkg.com/three-globe/example/img/night-sky.png'
 					htmlElementsData={htmlData}
-                                        htmlElement={(d: any) => {
-                                                const element = document.createElement('div');
-                                                const root = createRoot(element);
+					htmlElement={(d: any) => {
+						const element = document.createElement('div');
+						const root = createRoot(element);
 
 						if (d.type === 'marker') {
 							const label = String.fromCharCode(65 + d.idx);
@@ -241,24 +241,24 @@ const WorldGlobe = forwardRef<GlobeMethods, WorldGlobeProps>(
 							root.render(<SegmentLabel startLabel={startLabel} endLabel={endLabel} text={d.text} />);
 						}
 
-                                                return element;
-                                        }}
-                                        arcsData={arcData}
-                                        arcColor='color'
-                                        arcDashLength={0.4}
-                                        arcDashGap={1}
-                                        arcDashAnimateTime={2000}
-                                        arcStroke={1.0}
-                                        arcCurveResolution={128}
-                                        polygonsData={polygonData}
-                                        polygonCapColor={() => 'rgba(59, 130, 246, 0.25)'}
-                                        polygonSideColor={() => 'rgba(59, 130, 246, 0.15)'}
-                                        polygonStrokeColor={() => '#3b82f6'}
-                                        polygonLabel={(d: any) => d?.properties?.label || d?.properties?.name || 'Region'}
-                                        polygonsTransitionDuration={400}
-                                        onGlobeClick={({ lat, lng }) => {
-                                                if (activePointIndex !== null && Number.isFinite(lat) && Number.isFinite(lng)) {
-                                                        onPointMove(lat, lng);
+						return element;
+					}}
+					arcsData={arcData}
+					arcColor='color'
+					arcDashLength={0.4}
+					arcDashGap={1}
+					arcDashAnimateTime={2000}
+					arcStroke={1.0}
+					arcCurveResolution={128}
+					polygonsData={polygonData}
+					polygonCapColor={() => 'rgba(59, 130, 246, 0.25)'}
+					polygonSideColor={() => 'rgba(59, 130, 246, 0.15)'}
+					polygonStrokeColor={() => '#3b82f6'}
+					polygonLabel={(d: any) => d?.properties?.label || d?.properties?.name || 'Region'}
+					polygonsTransitionDuration={400}
+					onGlobeClick={({ lat, lng }) => {
+						if (activePointIndex !== null && Number.isFinite(lat) && Number.isFinite(lng)) {
+							onPointMove(lat, lng);
 						}
 					}}
 					showAtmosphere={true}
